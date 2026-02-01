@@ -5,15 +5,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronRight, CheckCircle2, ChevronLeft, Loader2, FileWarning, Search, Sun, Moon, Monitor } from "lucide-react"
+import { ChevronRight, CheckCircle2, ChevronLeft, Loader2, FileWarning, Search } from "lucide-react"
 import { invoke } from "@tauri-apps/api/core"
-import { useTheme } from "next-themes"
 import { ModeToggle } from "@/components/theme-toggle"
+import { useRouter } from "next/navigation"
 
 export default function StartPage() {
   const [step, setStep] = React.useState(1)
   const [isConfigCreated, setIsConfigCreated] = React.useState(false)
   const totalSteps = 4
+  const router = useRouter()
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, totalSteps))
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1))
@@ -85,7 +86,7 @@ export default function StartPage() {
             {step !== 1 ? "上一步" : ""}
           </Button>
           <Button 
-            onClick={step === totalSteps ? () => console.log("Finish") : nextStep}
+            onClick={step === totalSteps ? () => router.push("/") : nextStep}
             disabled={step === 3 && !isConfigCreated}
           >
             {step === totalSteps ? "完成" : "下一步"}
@@ -118,82 +119,10 @@ function StepOne() {
   )
 }
 
-function ThemePreviewLight() {
-  return (
-    <div className="space-y-2 rounded-lg bg-[#ecedef] p-2">
-      <div className="space-y-2 rounded-md bg-white p-2 shadow-sm">
-        <div className="h-2 w-[40px] rounded-lg bg-[#ecedef]" />
-        <div className="h-2 w-[60px] rounded-lg bg-[#ecedef]" />
-      </div>
-      <div className="flex items-center space-x-2 rounded-md bg-white p-2 shadow-sm">
-        <div className="h-4 w-4 rounded-full bg-[#ecedef]" />
-        <div className="h-2 w-[60px] rounded-lg bg-[#ecedef]" />
-      </div>
-    </div>
-  )
-}
-
-function ThemePreviewDark() {
-  return (
-    <div className="space-y-2 rounded-lg bg-slate-950 p-2">
-      <div className="space-y-2 rounded-md bg-slate-800 p-2 shadow-sm">
-        <div className="h-2 w-[40px] rounded-lg bg-slate-400" />
-        <div className="h-2 w-[60px] rounded-lg bg-slate-400" />
-      </div>
-      <div className="flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-sm">
-        <div className="h-4 w-4 rounded-full bg-slate-400" />
-        <div className="h-2 w-[60px] rounded-lg bg-slate-400" />
-      </div>
-    </div>
-  )
-}
-
 function StepTheme() {
-  const { setTheme, theme, systemTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return <div className="h-[200px]" />
-  }
-
   return (
-    <div className="grid grid-cols-3 gap-4">
-      <div 
-        className={`cursor-pointer rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground ${theme === 'light' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
-        onClick={() => setTheme("light")}
-      >
-        <ThemePreviewLight />
-        <div className="flex items-center justify-center p-2 font-medium text-sm gap-2">
-           <Sun className="h-4 w-4" />
-           <span className="hidden sm:inline">Light</span>
-        </div>
-      </div>
-      
-      <div 
-        className={`cursor-pointer rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground ${theme === 'dark' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
-        onClick={() => setTheme("dark")}
-      >
-        <ThemePreviewDark />
-        <div className="flex items-center justify-center p-2 font-medium text-sm gap-2">
-           <Moon className="h-4 w-4" />
-           <span className="hidden sm:inline">Dark</span>
-        </div>
-      </div>
-
-      <div 
-        className={`cursor-pointer rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground ${theme === 'system' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
-        onClick={() => setTheme("system")}
-      >
-        {systemTheme === 'dark' ? <ThemePreviewDark /> : <ThemePreviewLight />}
-        <div className="flex items-center justify-center p-2 font-medium text-sm gap-2">
-           <Monitor className="h-4 w-4" />
-           <span className="hidden sm:inline">System</span>
-        </div>
-      </div>
+    <div className="flex items-center justify-center py-10">
+      <ModeToggle />
     </div>
   )
 }
