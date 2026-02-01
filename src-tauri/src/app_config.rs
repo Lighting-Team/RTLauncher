@@ -1,19 +1,44 @@
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 use regex::Regex;
 
+fn default_language() -> String {
+    "zh-CN".to_string()
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LauncherConfig {
     pub initialized: bool,
     pub version: String,
     pub generated_at: i64,
+    pub language: Option<String>,
+}
+
+impl Default for LauncherConfig {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            generated_at: 0,
+            language: Some(default_language()),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     pub launcher: LauncherConfig,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            launcher: LauncherConfig::default(),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -24,7 +49,7 @@ pub enum ConfigStatus {
     InvalidJson, // Using generic name for format error, though now it's YAML
     InvalidData,
     ReadError,
-    ParseErrorInitialized, // New status: Format error but initialized: true detected
+    ParseErrorInitialized,
 }
 
 #[derive(Serialize)]
@@ -85,7 +110,7 @@ fn get_config_status() -> ConfigCheckResult {
             }
         }
         Err(err) => {
-            // Check if initialized: true exists despite parse error
+            // Check if initialized is true using regex
             let re = Regex::new(r"initialized\s*:\s*true").unwrap();
             if re.is_match(&content) {
                 ConfigCheckResult {
@@ -100,7 +125,7 @@ fn get_config_status() -> ConfigCheckResult {
                     error: Some(err.to_string()),
                 }
             }
-        },
+        }
     }
 }
 
@@ -115,7 +140,10 @@ pub fn check_initialization() -> bool {
     match fs::read_to_string(config_path) {
         Ok(content) => match serde_yaml::from_str::<AppConfig>(&content) {
             Ok(config) => config.launcher.initialized,
-            Err(_) => false,
+            Err(_) => {
+                let re = Regex::new(r"initialized\s*:\s*true").unwrap();
+                re.is_match(&content)
+            },
         },
         Err(_) => false,
     }
@@ -153,13 +181,11 @@ pub fn create_config_files() -> Result<(), String> {
             .duration_since(UNIX_EPOCH)
             .map_err(|e| e.to_string())?
             .as_secs() as i64;
-        let default_config = AppConfig {
-            launcher: LauncherConfig {
-                initialized: false,
-                version: env!("CARGO_PKG_VERSION").to_string(),
-                generated_at,
-            },
-        };
+
+        let mut default_config = AppConfig::default();
+        default_config.launcher.generated_at = generated_at;
+        // initialized is already false by default
+
         let config_str =
             serde_yaml::to_string(&default_config).map_err(|e| e.to_string())?;
         fs::write(config_path, config_str).map_err(|e| e.to_string())?;
@@ -178,6 +204,41 @@ pub fn complete_initialization() -> Result<(), String> {
     };
 
     config.launcher.initialized = true;
+
+    let config_str = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
+    fs::write(config_path, config_str).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn repair_config() -> Result<(), String> {
+    let config_path = Path::new("RTL/config.yml");
+    let generated_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_secs() as i64;
+    
+    // Create a default config but set initialized to true
+    let mut default_config = AppConfig::default();
+    default_config.launcher.generated_at = generated_at;
+    default_config.launcher.initialized = true;
+    
+    let config_str = serde_yaml::to_string(&default_config).map_err(|e| e.to_string())?;
+    fs::write(config_path, config_str).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_language(language: String) -> Result<(), String> {
+    let config_path = Path::new("RTL/config.yml");
+    
+    let mut config = match fs::read_to_string(config_path) {
+        Ok(content) => serde_yaml::from_str::<AppConfig>(&content).map_err(|e| e.to_string())?,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    config.launcher.language = Some(language);
 
     let config_str = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
     fs::write(config_path, config_str).map_err(|e| e.to_string())?;
