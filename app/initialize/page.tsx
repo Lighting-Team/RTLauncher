@@ -26,6 +26,21 @@ export default function StartPage() {
     setIsConfigCreated(true)
   }
 
+  const handleConfigInvalidated = () => {
+    setIsConfigCreated(false)
+  }
+
+  const handleFinish = async () => {
+    try {
+      await invoke("complete_initialization")
+      router.push('/')
+    } catch (err) {
+      console.error("Failed to complete initialization:", err)
+      // 可以选择添加一个 toast 提示，或者这里暂且静默失败，因为影响不大
+      router.push('/')
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-lg shadow-xl border-muted">
@@ -74,7 +89,13 @@ export default function StartPage() {
           <div>
             {step === 1 && <StepOne />}
             {step === 2 && <StepTheme />}
-            {step === 3 && <StepTwo onConfigCreated={handleConfigCreated} isConfigCreated={isConfigCreated} />}
+            {step === 3 && (
+              <StepTwo 
+                onConfigCreated={handleConfigCreated} 
+                onConfigInvalidated={handleConfigInvalidated} 
+                isConfigCreated={isConfigCreated} 
+              />
+            )}
             {step === 4 && <StepThree />}
           </div>
         </CardContent>
@@ -89,7 +110,7 @@ export default function StartPage() {
             {step !== 1 ? "上一步" : ""}
           </Button>
           <Button 
-            onClick={step === totalSteps ? () => router.push('/') : nextStep}
+            onClick={step === totalSteps ? handleFinish : nextStep}
             disabled={step === 3 && !isConfigCreated}
           >
             {step === totalSteps ? "完成" : "下一步"}
@@ -202,79 +223,100 @@ function StepTheme() {
   )
 }
 
-function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => void, isConfigCreated: boolean }) {
+function StepTwo({ 
+  onConfigCreated, 
+  onConfigInvalidated, 
+  isConfigCreated 
+}: { 
+  onConfigCreated: () => void, 
+  onConfigInvalidated: () => void, 
+  isConfigCreated: boolean 
+}) {
+  type ConfigStatus = "ok" | "missing" | "invalid_json" | "invalid_data" | "read_error"
+  type AppConfig = {
+    launcher: {
+      initialized: boolean
+      version: string
+      generated_at: number
+    }
+  }
+  type ConfigCheckResult = {
+    status: ConfigStatus
+    config?: AppConfig | null
+    error?: string | null
+  }
+
   const [loading, setLoading] = React.useState(false)
   const [checking, setChecking] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [configPath, setConfigPath] = React.useState<string>("")
+  const [configStatus, setConfigStatus] = React.useState<ConfigStatus>("missing")
+  const [configInfo, setConfigInfo] = React.useState<AppConfig["launcher"] | null>(null)
+
+  const refreshStatus = React.useCallback(async (withDelay = true) => {
+    setChecking(true)
+    setError(null)
+    try {
+      const result = await invoke<ConfigCheckResult>("check_config_status")
+      setConfigStatus(result.status)
+      setConfigInfo(result.config?.launcher ?? null)
+      if (result.error) {
+        setError(result.error)
+      }
+      if (result.status === "ok") {
+        onConfigCreated()
+      } else {
+        // 如果状态不是 ok，但 isConfigCreated 为 true，说明配置已失效，需要通知父组件
+        if (isConfigCreated) {
+          onConfigInvalidated()
+        }
+      }
+    } catch (err) {
+      console.error(err)
+      setConfigStatus("read_error")
+      setConfigInfo(null)
+      setError("检测配置文件失败，请重试。")
+      if (isConfigCreated) {
+        onConfigInvalidated()
+      }
+    } finally {
+      if (withDelay) {
+        setTimeout(() => setChecking(false), 800)
+      } else {
+        setChecking(false)
+      }
+    }
+  }, [onConfigCreated, onConfigInvalidated, isConfigCreated])
 
   const checkAndCreateConfig = React.useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const exists = await invoke<boolean>("check_config_files")
-      if (exists) {
-        onConfigCreated()
-      } else {
-        await invoke("create_config_files")
-        onConfigCreated()
-      }
+      await invoke("create_config_files")
+      await refreshStatus(false)
     } catch (err) {
-        console.error(err)
+      console.error(err)
       setError("初始化配置文件失败，请重试。")
     } finally {
       setLoading(false)
     }
-  }, [onConfigCreated])
+  }, [refreshStatus])
 
   // Initial check on mount
   React.useEffect(() => {
       // Fetch config path
       invoke<string>("get_config_path").then(setConfigPath).catch(console.error)
 
-      if (!isConfigCreated) {
-           setChecking(true)
-           invoke<boolean>("check_config_files").then(exists => {
-               if (exists) {
-                   onConfigCreated()
-               }
-           }).catch(console.error)
-           .finally(() => {
-               // Add a small delay for better UX so the checking state isn't just a flicker
-               setTimeout(() => setChecking(false), 800)
-           })
-      } else {
-        setChecking(false)
-      }
-  }, [isConfigCreated, onConfigCreated])
+      // 每次挂载都重新检测，确保文件状态最新
+      refreshStatus()
+  }, [refreshStatus])
 
-
-  if (isConfigCreated) {
-      return (
-        <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center">
-            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
-                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-500" />
-            </div>
-            <div className="space-y-2">
-                <h3 className="text-lg font-medium">配置文件就绪</h3>
-                <p className="text-sm text-muted-foreground">
-                    初始化检查通过，您可以继续下一步。
-                </p>
-                {configPath && (
-                    <div className="mt-4 rounded-md bg-muted p-2 text-xs font-mono text-muted-foreground break-all">
-                        {configPath}
-                    </div>
-                )}
-            </div>
-        </div>
-      )
-  }
 
   if (checking) {
       return (
         <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center">
             <div className="rounded-full bg-muted p-3">
-                <Search className="h-8 w-8 text-muted-foreground" />
+                <Search className="h-8 w-8 text-muted-foreground animate-pulse" />
             </div>
             <div className="space-y-2">
                 <h3 className="text-lg font-medium">正在检测环境...</h3>
@@ -286,6 +328,78 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
       )
   }
 
+  if (isConfigCreated) {
+      const generatedAtLabel = configInfo?.generated_at
+        ? new Date(configInfo.generated_at * 1000).toLocaleString()
+        : "-"
+      return (
+        <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center">
+            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-500" />
+            </div>
+            <div className="space-y-2">
+                <h3 className="text-lg font-medium">配置文件就绪</h3>
+                <p className="text-sm text-muted-foreground">
+                    初始化检查通过，您可以继续下一步。
+                </p>
+                {configInfo && (
+                  <div className="mt-4 w-full rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between">
+                      <span>版本</span>
+                      <span className="font-mono">{configInfo.version || "-"}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span>生成时间</span>
+                      <span className="font-mono">{generatedAtLabel}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span>初始化状态</span>
+                      <span className="font-mono">{configInfo.initialized ? "true" : "false"}</span>
+                    </div>
+                  </div>
+                )}
+                {configPath && (
+                    <div className="mt-4 rounded-md bg-muted p-2 text-xs font-mono text-muted-foreground break-all">
+                        {configPath}
+                    </div>
+                )}
+            </div>
+        </div>
+      )
+  }
+
+  const statusTitle = (() => {
+    switch (configStatus) {
+      case "missing":
+        return "未找到配置文件"
+      case "invalid_json":
+        return "配置文件已损坏"
+      case "invalid_data":
+        return "配置内容不完整"
+      case "read_error":
+        return "无法读取配置文件"
+      default:
+        return "配置文件异常"
+    }
+  })()
+
+  const statusDescription = (() => {
+    switch (configStatus) {
+      case "missing":
+        return "我们需要在您的设备上创建必要的配置文件和目录结构以运行启动器。"
+      case "invalid_json":
+        return "配置文件格式不正确，需要重新生成以继续。"
+      case "invalid_data":
+        return "配置文件存在，但关键字段缺失或不合法。"
+      case "read_error":
+        return "读取配置文件失败，请检查文件权限或磁盘状态。"
+      default:
+        return "配置文件状态异常，请重新初始化。"
+    }
+  })()
+
+  const actionLabel = configStatus === "missing" ? "开始初始化" : "重新初始化"
+
   return (
     <div className="space-y-6">
       <div className="grid gap-3">
@@ -294,11 +408,30 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
                 <FileWarning className="h-6 w-6 text-muted-foreground" />
             </div>
             <div className="space-y-1">
-                <p className="text-sm font-medium">检测到缺少配置文件</p>
+                <p className="text-sm font-medium">{statusTitle}</p>
                 <p className="text-xs text-muted-foreground max-w-[260px] mx-auto">
-                    我们需要在您的设备上创建必要的配置文件和目录结构以运行启动器。
+                    {statusDescription}
                 </p>
             </div>
+
+            {configInfo && (
+              <div className="w-full rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span>版本</span>
+                  <span className="font-mono">{configInfo.version || "-"}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span>生成时间</span>
+                  <span className="font-mono">
+                    {configInfo.generated_at ? new Date(configInfo.generated_at * 1000).toLocaleString() : "-"}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span>初始化状态</span>
+                  <span className="font-mono">{configInfo.initialized ? "true" : "false"}</span>
+                </div>
+              </div>
+            )}
 
             {configPath && (
                 <div className="w-full rounded-md bg-muted/50 p-2 text-xs font-mono text-muted-foreground break-all border border-muted">
@@ -307,7 +440,7 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
             )}
 
             {error && (
-                <p className="text-sm text-red-500 font-medium">{error}</p>
+                <p className="text-xs text-red-500 font-medium break-all">{error}</p>
             )}
 
             <Button onClick={checkAndCreateConfig} disabled={loading}>
@@ -317,7 +450,7 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
                         正在初始化...
                     </>
                 ) : (
-                    "开始初始化"
+                    actionLabel
                 )}
             </Button>
         </div>

@@ -15,8 +15,79 @@ pub struct AppConfig {
     pub launcher: LauncherConfig,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConfigStatus {
+    Ok,
+    Missing,
+    InvalidJson,
+    InvalidData,
+    ReadError,
+}
+
+#[derive(Serialize)]
+pub struct ConfigCheckResult {
+    pub status: ConfigStatus,
+    pub config: Option<AppConfig>,
+    pub error: Option<String>,
+}
+
 fn is_valid_config(config: &AppConfig) -> bool {
     !config.launcher.version.trim().is_empty() && config.launcher.generated_at > 0
+}
+
+fn get_config_status() -> ConfigCheckResult {
+    let dir_path = Path::new("RTL");
+    let config_path = Path::new("RTL/config.json");
+    if !dir_path.exists() || !config_path.exists() {
+        return ConfigCheckResult {
+            status: ConfigStatus::Missing,
+            config: None,
+            error: None,
+        };
+    }
+
+    let content = match fs::read_to_string(config_path) {
+        Ok(content) => content,
+        Err(err) => {
+            return ConfigCheckResult {
+                status: ConfigStatus::ReadError,
+                config: None,
+                error: Some(err.to_string()),
+            }
+        }
+    };
+
+    if content.trim().is_empty() {
+        return ConfigCheckResult {
+            status: ConfigStatus::InvalidJson,
+            config: None,
+            error: Some("empty config file".to_string()),
+        };
+    }
+
+    match serde_json::from_str::<AppConfig>(&content) {
+        Ok(config) => {
+            if is_valid_config(&config) {
+                ConfigCheckResult {
+                    status: ConfigStatus::Ok,
+                    config: Some(config),
+                    error: None,
+                }
+            } else {
+                ConfigCheckResult {
+                    status: ConfigStatus::InvalidData,
+                    config: Some(config),
+                    error: None,
+                }
+            }
+        }
+        Err(err) => ConfigCheckResult {
+            status: ConfigStatus::InvalidJson,
+            config: None,
+            error: Some(err.to_string()),
+        },
+    }
 }
 
 #[tauri::command]
@@ -38,19 +109,12 @@ pub fn check_initialization() -> bool {
 
 #[tauri::command]
 pub fn check_config_files() -> bool {
-    let dir_path = Path::new("RTL");
-    let config_path = Path::new("RTL/config.json");
-    if !dir_path.exists() || !config_path.exists() {
-        return false;
-    }
+    matches!(get_config_status().status, ConfigStatus::Ok)
+}
 
-    match fs::read_to_string(config_path) {
-        Ok(content) => match serde_json::from_str::<AppConfig>(&content) {
-            Ok(config) => is_valid_config(&config),
-            Err(_) => false,
-        },
-        Err(_) => false,
-    }
+#[tauri::command]
+pub fn check_config_status() -> ConfigCheckResult {
+    get_config_status()
 }
 
 #[tauri::command]
@@ -87,6 +151,23 @@ pub fn create_config_files() -> Result<(), String> {
         fs::write(config_path, config_str).map_err(|e| e.to_string())?;
     }
     
+    Ok(())
+}
+
+#[tauri::command]
+pub fn complete_initialization() -> Result<(), String> {
+    let config_path = Path::new("RTL/config.json");
+    
+    let mut config = match fs::read_to_string(config_path) {
+        Ok(content) => serde_json::from_str::<AppConfig>(&content).map_err(|e| e.to_string())?,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    config.launcher.initialized = true;
+
+    let config_str = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    fs::write(config_path, config_str).map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
