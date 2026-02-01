@@ -30,7 +30,7 @@ pub mod get_origin_version {
                     "qlut" => qlut + "/assets",
                     "sjtug" => sjtug + "/assets",
                     "ustc" => ustc + "/assets",
-                    _ => "https://resources.download.minecraft.net",
+                    _ => mojang_heads::assests,
                 }
             }
         }
