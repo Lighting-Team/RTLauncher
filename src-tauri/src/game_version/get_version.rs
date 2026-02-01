@@ -76,17 +76,88 @@ pub mod get_version {
                 const bmcl_meta: &str = "https://bmclapi2.bangbang93.com/quilt-meta";
             }
 
-            mod cyan{
+            mod cyan {
                 // https://www.mcmod.cn/class/4420.html
             }
 
-            mod flint{
+            mod flint {
                 // https://www.mcmod.cn/class/14621.html
             }
 
-            mod m3l{
+            mod m3l {
                 // https://www.mcmod.cn/class/19181.html
             }
         }
+    }
+
+    async fn fetch_json(url: &str, timeout_seconds: Option<u64>) -> Result<String, Error> {
+        // 创建可复用的 HTTP 客户端（启用连接池）
+        let client = Client::builder()
+            .timeout(Duration::from_secs(timeout_seconds.unwrap_or(30)))
+            .pool_max_idle_per_host(5)
+            .gzip(true)
+            .brotli(true)
+            .build()?;
+
+        // 发送请求并获取响应
+        let response = client.get(url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(Error::from(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("HTTP错误: {}", response.status()),
+            )));
+        }
+
+        let content = response.text().await?;
+
+        Ok(content)
+    }
+
+    /// 镜像源枚举
+    pub enum MirrorSource {
+        Mojang,
+        Bmclapi,
+        Jcut,
+        Lzuoss,
+        Nju,
+        Nyist,
+        Qlut,
+        Sjtug,
+        Ustc,
+    }
+
+    impl MirrorSource {
+        /// 获取镜像源的基础URL
+        fn base_url(&self) -> &str {
+            match self {
+                MirrorSource::Mojang => &mojang_heads::launcher_meta,
+                MirrorSource::Bmclapi => &mirror_heads::bmclapi,
+                MirrorSource::Jcut => &mirror_heads::jcut,
+                MirrorSource::Lzuoss => &mirror_heads::lzuoss,
+                MirrorSource::Nju => &mirror_heads::nju,
+                MirrorSource::Nyist => &mirror_heads::nyist,
+                MirrorSource::Qlut => &mirror_heads::qlut,
+                MirrorSource::Sjtug => &mirror_heads::sjtug,
+                MirrorSource::Ustc => &mirror_heads::ustc,
+            }
+        }
+    }
+
+    /// 统一的版本清单获取函数
+    pub fn fetch_version_manifest(
+        source: MirrorSource,
+        params: Option<(bool, Option<u64>)>,
+    ) -> Result<String, Error> {
+        let (use_version2, timeout_seconds) = params.unwrap_or((true, Some(3)));
+
+        let base_url = source.base_url();
+        let url = if use_version2 {
+            base_url.to_string() + version2_suffix
+        } else {
+            base_url.to_string() + version_suffix
+        };
+
+        fetch_json(&url, timeout_seconds)
     }
 }
