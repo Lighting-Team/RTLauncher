@@ -1,4 +1,4 @@
-pub mod get_origin_version {
+pub mod get_version {
     const version_suffix: &str = "/mc/game/version_manifest.json"; // http://launchermeta.mojang.com/mc/game/version_manifest.json
     const version2_suffix: &str = "/mc/game/version_manifest_v2.json"; // http://launchermeta.mojang.com/mc/game/version_manifest_v2.json
 
