@@ -232,7 +232,7 @@ function StepTwo({
   onConfigInvalidated: () => void, 
   isConfigCreated: boolean 
 }) {
-  type ConfigStatus = "ok" | "missing" | "invalid_json" | "invalid_data" | "read_error"
+  type ConfigStatus = "ok" | "missing" | "invalid_json" | "invalid_data" | "read_error" | "parse_error_initialized"
   type AppConfig = {
     launcher: {
       initialized: boolean
@@ -374,6 +374,8 @@ function StepTwo({
         return "未找到配置文件"
       case "invalid_json":
         return "配置文件已损坏"
+      case "parse_error_initialized":
+        return "配置文件结构损坏"
       case "invalid_data":
         return "配置内容不完整"
       case "read_error":
@@ -389,6 +391,8 @@ function StepTwo({
         return "我们需要在您的设备上创建必要的配置文件和目录结构以运行启动器。"
       case "invalid_json":
         return "配置文件格式不正确，需要重新生成以继续。"
+      case "parse_error_initialized":
+        return "检测到配置文件已初始化，但结构损坏无法解析。您可以尝试重新生成。"
       case "invalid_data":
         return "配置文件存在，但关键字段缺失或不合法。"
       case "read_error":

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
+use regex::Regex;
 
 fn default_language() -> String {
     "zh-CN".to_string()
@@ -45,7 +46,7 @@ impl Default for AppConfig {
 pub enum ConfigStatus {
     Ok,
     Missing,
-    InvalidJson,
+    InvalidJson, // Using generic name for format error, though now it's YAML
     InvalidData,
     ReadError,
     ParseErrorInitialized,
@@ -242,6 +243,30 @@ pub fn set_language(language: String) -> Result<(), String> {
     let config_str = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
     fs::write(config_path, config_str).map_err(|e| e.to_string())?;
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn repair_config() -> Result<(), String> {
+    let config_path = Path::new("RTL/config.yml");
+    
+    // Create a valid default config but with initialized = true
+    let generated_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_secs() as i64;
+        
+    let default_config = AppConfig {
+        launcher: LauncherConfig {
+            initialized: true, // Force true for repair
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            generated_at,
+        },
+    };
+    
+    let config_str = serde_yaml::to_string(&default_config).map_err(|e| e.to_string())?;
+    fs::write(config_path, config_str).map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 
