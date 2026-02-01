@@ -6,7 +6,9 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
         app_config::check_initialization,
         app_config::check_config_files,
+        app_config::check_config_status,
         app_config::create_config_files,
+        app_config::complete_initialization,
         app_config::get_config_path
     ])
     .setup(|app| {
