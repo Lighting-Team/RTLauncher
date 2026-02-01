@@ -33,11 +33,12 @@ import {
 type ConfigStatus = "ok" | "missing" | "invalid_json" | "invalid_data" | "read_error" | "parse_error_initialized"
 type AppConfig = {
     launcher: {
-    initialized: boolean
-    version: string
-    generated_at: number
+      initialized: boolean
+      version: string
+      generated_at: number
+      language?: string
     }
-}
+  }
 type ConfigCheckResult = {
     status: ConfigStatus
     config?: AppConfig | null
@@ -52,14 +53,16 @@ async function verifyConfig() {
         return {
             isInitialized,
             status: result.status,
-            error: result.error
+            error: result.error,
+            config: result.config
         }
     } catch (error) {
         console.error("Config check failed", error)
         return {
             isInitialized: false,
             status: "read_error" as ConfigStatus,
-            error: String(error)
+            error: String(error),
+            config: null
         }
     }
 }
@@ -70,12 +73,22 @@ export default function Page() {
   const [isChecking, setIsChecking] = useState(true)
   const [showRepairDialog, setShowRepairDialog] = useState(false)
 
-  const processConfigResult = React.useCallback((result: { isInitialized: boolean, status: ConfigStatus, error?: string | null }) => {
+  const processConfigResult = React.useCallback((result: { isInitialized: boolean, status: ConfigStatus, error?: string | null, config?: AppConfig | null }) => {
         if (result.isInitialized) {
           if (result.status === "parse_error_initialized") {
              setShowRepairDialog(true)
              setIsReady(false)
           } else {
+             // Language check
+             const currentLang = result.config?.launcher?.language
+             const supportedLangs = ["zh-CN"]
+             
+             if (!currentLang || !supportedLangs.includes(currentLang)) {
+                 invoke("set_language", { language: "zh-CN" }).then(() => {
+                     toast.warning("语言配置错误，已切换为 简体中文 zh-cn")
+                 }).catch(err => console.error("Failed to set language", err))
+             }
+
              setIsReady(true)
              if (result.status !== "ok") {
                  toast.warning("配置文件异常", {
@@ -124,9 +137,6 @@ export default function Page() {
   if (isChecking) {
     return null
   }
-  
-  // 如果需要显示修复对话框，也渲染一个空的背景或者部分 UI，这里直接返回 null 等待 dialog 覆盖
-  // 或者可以渲染 Sidebar 结构但不显示内容
   
   return (
     <>
