@@ -32,7 +32,7 @@ export default function StartPage() {
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div
                   key={i}
-                  className={`h-1.5 w-8 rounded-full transition-colors duration-300 ${
+                  className={`h-1.5 w-8 rounded-full ${
                     i + 1 <= step ? "bg-primary" : "bg-muted"
                   }`}
                 />
@@ -67,7 +67,7 @@ export default function StartPage() {
         </CardHeader>
         
         <CardContent className="min-h-[200px] py-2">
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          <div>
             {step === 1 && <StepOne />}
             {step === 2 && <StepTheme />}
             {step === 3 && <StepTwo onConfigCreated={handleConfigCreated} isConfigCreated={isConfigCreated} />}
@@ -80,7 +80,6 @@ export default function StartPage() {
             variant="ghost"
             onClick={prevStep}
             disabled={step === 1}
-            className="pl-0 hover:pl-2 transition-all"
           >
             {step !== 1 && <ChevronLeft className="mr-2 h-4 w-4" />}
             {step !== 1 ? "上一步" : ""}
@@ -164,7 +163,7 @@ function StepTheme() {
   return (
     <div className="grid grid-cols-3 gap-4">
       <div 
-        className={`cursor-pointer rounded-xl border-2 p-1 transition-all hover:bg-accent hover:text-accent-foreground ${theme === 'light' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
+        className={`cursor-pointer rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground ${theme === 'light' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
         onClick={() => setTheme("light")}
       >
         <ThemePreviewLight />
@@ -175,7 +174,7 @@ function StepTheme() {
       </div>
       
       <div 
-        className={`cursor-pointer rounded-xl border-2 p-1 transition-all hover:bg-accent hover:text-accent-foreground ${theme === 'dark' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
+        className={`cursor-pointer rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground ${theme === 'dark' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
         onClick={() => setTheme("dark")}
       >
         <ThemePreviewDark />
@@ -186,7 +185,7 @@ function StepTheme() {
       </div>
 
       <div 
-        className={`cursor-pointer rounded-xl border-2 p-1 transition-all hover:bg-accent hover:text-accent-foreground ${theme === 'system' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
+        className={`cursor-pointer rounded-xl border-2 p-1 hover:bg-accent hover:text-accent-foreground ${theme === 'system' ? 'border-primary ring-2 ring-primary/20' : 'border-muted'}`}
         onClick={() => setTheme("system")}
       >
         {systemTheme === 'dark' ? <ThemePreviewDark /> : <ThemePreviewLight />}
@@ -203,6 +202,7 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
   const [loading, setLoading] = React.useState(false)
   const [checking, setChecking] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
+  const [configPath, setConfigPath] = React.useState<string>("")
 
   const checkAndCreateConfig = React.useCallback(async () => {
     setLoading(true)
@@ -225,6 +225,9 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
 
   // Initial check on mount
   React.useEffect(() => {
+      // Fetch config path
+      invoke<string>("get_config_path").then(setConfigPath).catch(console.error)
+
       if (!isConfigCreated) {
            setChecking(true)
            invoke<boolean>("check_config_files").then(exists => {
@@ -244,7 +247,7 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
 
   if (isConfigCreated) {
       return (
-        <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center animate-in fade-in duration-300">
+        <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center">
             <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
                 <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-500" />
             </div>
@@ -253,6 +256,11 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
                 <p className="text-sm text-muted-foreground">
                     初始化检查通过，您可以继续下一步。
                 </p>
+                {configPath && (
+                    <div className="mt-4 rounded-md bg-muted p-2 text-xs font-mono text-muted-foreground break-all">
+                        {configPath}
+                    </div>
+                )}
             </div>
         </div>
       )
@@ -260,9 +268,9 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
 
   if (checking) {
       return (
-        <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center animate-in fade-in duration-300">
+        <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center">
             <div className="rounded-full bg-muted p-3">
-                <Search className="h-8 w-8 text-muted-foreground animate-pulse" />
+                <Search className="h-8 w-8 text-muted-foreground" />
             </div>
             <div className="space-y-2">
                 <h3 className="text-lg font-medium">正在检测环境...</h3>
@@ -288,6 +296,12 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
                 </p>
             </div>
             
+            {configPath && (
+                <div className="w-full rounded-md bg-muted/50 p-2 text-xs font-mono text-muted-foreground break-all border border-muted">
+                    {configPath}
+                </div>
+            )}
+
             {error && (
                 <p className="text-sm text-red-500 font-medium">{error}</p>
             )}
@@ -295,7 +309,7 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
             <Button onClick={checkAndCreateConfig} disabled={loading}>
                 {loading ? (
                     <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4" />
                         正在初始化...
                     </>
                 ) : (
@@ -311,12 +325,9 @@ function StepTwo({ onConfigCreated, isConfigCreated }: { onConfigCreated: () => 
 function StepThree() {
   return (
     <div className="flex flex-col items-center justify-center space-y-6 py-6 text-center">
-      <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-green-500/20 blur-xl animate-pulse" />
-        <div className="relative rounded-full bg-background p-4 shadow-sm ring-1 ring-green-500/20">
-          <CheckCircle2 className="h-12 w-12 text-green-600 dark:text-green-500" />
-        </div>
-      </div>
+            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/20">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-500" />
+            </div>
       <div className="space-y-2 max-w-xs mx-auto">
         <h3 className="text-lg font-semibold text-foreground">初始化完成</h3>
         <p className="text-sm text-muted-foreground">
