@@ -9,9 +9,11 @@ import { ChevronRight, CheckCircle2, ChevronLeft, Loader2, FileWarning, Search, 
 import { invoke } from "@tauri-apps/api/core"
 import { useTheme } from "next-themes"
 import { ModeToggle } from "@/components/theme-toggle"
+import { useRouter } from "next/navigation"
 
 
 export default function StartPage() {
+  const router = useRouter()
   const [step, setStep] = React.useState(1)
   const [isConfigCreated, setIsConfigCreated] = React.useState(false)
   const totalSteps = 4
@@ -87,7 +89,7 @@ export default function StartPage() {
             {step !== 1 ? "上一步" : ""}
           </Button>
           <Button 
-            onClick={step === totalSteps ? () => console.log("Finish") : nextStep}
+            onClick={step === totalSteps ? () => router.push('/') : nextStep}
             disabled={step === 3 && !isConfigCreated}
           >
             {step === totalSteps ? "完成" : "下一步"}
