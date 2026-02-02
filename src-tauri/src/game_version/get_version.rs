@@ -76,31 +76,7 @@ pub mod get_version {
         }
     }
 
-    async fn fetch_json(url: &str, timeout_seconds: Option<u64>) -> Result<String, Error> {
-        // 创建可复用的 HTTP 客户端（启用连接池）
-        let client = Client::builder()
-            .timeout(Duration::from_secs(timeout_seconds.unwrap_or(30)))
-            .pool_max_idle_per_host(5)
-            .gzip(true)
-            .brotli(true)
-            .build()?;
-
-        // 发送请求并获取响应
-        let response = client.get(url).send().await?;
-
-        if !response.status().is_success() {
-            return Err(Error::from(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("HTTP错误: {}", response.status()),
-            )));
-        }
-
-        let content = response.text().await?;
-
-        Ok(content)
-    }
-
-    pub fn get_version(mirror: &str) -> &'static str {
+    pub fn get_version_manifest_link(mirror: &str) -> &'static str {
         match mirror {
             "mojang" => heads::mojang_heads::launcher_meta + version_suffix,
             "mojang_v2" => heads::mojang_heads::launcher_meta + version2_suffix,
@@ -138,50 +114,114 @@ pub mod get_version {
         }
     }
 
-    /// 镜像源枚举
-    pub enum MirrorSource {
-        Mojang,
-        Bmclapi,
-        Jcut,
-        Lzuoss,
-        Nju,
-        Nyist,
-        Qlut,
-        Sjtug,
-        Ustc,
+    #[derive(Debug)]
+    pub enum VersionError {
+        NetworkError(String),
+        ParseError(String),
+        InvalidMirror(String),
     }
 
-    impl MirrorSource {
-        /// 获取镜像源的基础URL
-        fn base_url(&self) -> &str {
+    impl std::fmt::Display for VersionError {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
-                MirrorSource::Mojang => &mojang_heads::launcher_meta,
-                MirrorSource::Bmclapi => &mirror_heads::bmclapi,
-                MirrorSource::Jcut => &mirror_heads::jcut,
-                MirrorSource::Lzuoss => &mirror_heads::lzuoss,
-                MirrorSource::Nju => &mirror_heads::nju,
-                MirrorSource::Nyist => &mirror_heads::nyist,
-                MirrorSource::Qlut => &mirror_heads::qlut,
-                MirrorSource::Sjtug => &mirror_heads::sjtug,
-                MirrorSource::Ustc => &mirror_heads::ustc,
+                VersionError::NetworkError(e) => write!(f, "网络请求失败: {}", e),
+                VersionError::ParseError(e) => write!(f, "数据解析失败: {}", e),
+                VersionError::InvalidMirror(e) => write!(f, "无效的镜像源: {}", e),
+            }
+        }
+    }
+
+    impl std::error::Error for VersionError {}
+
+    pub struct VersionManifestParams {
+        pub use_version2: bool,
+        pub timeout_seconds: u64,
+    }
+
+    impl Default for VersionManifestParams {
+        fn default() -> Self {
+            Self {
+                use_version2: true,
+                timeout_seconds: 3,
             }
         }
     }
 
     /// 统一的版本清单获取函数
-    pub fn fetch_version_manifest(
+    pub async fn fetch_version_manifest(
         source: MirrorSource,
-        params: Option<(bool, Option<u64>)>,
-    ) -> Result<String, Error> {
-        let (use_version2, timeout_seconds) = params.unwrap_or((true, Some(3)));
+        params: Option<VersionManifestParams>,
+    ) -> Result<String, VersionError> {
+        let params = params.unwrap_or_default();
 
         let base_url = source.base_url();
-        let url = if use_version2 {
-            base_url.to_string() + version2_suffix
+        let url = if params.use_version2 {
+            format!("{}{}", base_url, version2_suffix)
         } else {
-            base_url.to_string() + version_suffix
+            format!("{}{}", base_url, version_suffix)
         };
 
-        fetch_json(&url, timeout_seconds)
+        match fetch_json(&url, Some(params.timeout_seconds)).await {
+            Ok(content) => Ok(content),
+            Err(e) => Err(VersionError::NetworkError(e.to_string())),
+        }
+    }
+
+    pub enum MirrorSource {
+        Mojang { use_v2: bool },
+        Bmclapi { use_v2: bool },
+        Jcut { use_v2: bool },
+        Lzuoss { use_v2: bool },
+        Nju { use_v2: bool },
+        Nyist { use_v2: bool },
+        Qlut { use_v2: bool },
+        Sjtug { use_v2: bool },
+        Ustc { use_v2: bool },
+    }
+
+    impl MirrorSource {
+        fn base_url(&self) -> &str {
+            match self {
+                MirrorSource::Mojang { use_v2: _ } => &heads::mojang_heads::launcher_meta,
+                MirrorSource::Bmclapi { use_v2: _ } => &heads::mirror_heads::bmclapi,
+                MirrorSource::Jcut { use_v2: _ } => &heads::mirror_heads::jcut,
+                MirrorSource::Lzuoss { use_v2: _ } => &heads::mirror_heads::lzuoss,
+                MirrorSource::Nju { use_v2: _ } => &heads::mirror_heads::nju,
+                MirrorSource::Nyist { use_v2: _ } => &heads::mirror_heads::nyist,
+                MirrorSource::Qlut { use_v2: _ } => &heads::mirror_heads::qlut,
+                MirrorSource::Sjtug { use_v2: _ } => &heads::mirror_heads::sjtug,
+                MirrorSource::Ustc { use_v2: _ } => &heads::mirror_heads::ustc,
+            }
+        }
+    }
+
+    async fn fetch_json(url: &str, timeout_seconds: Option<u64>) -> Result<String, VersionError> {
+        let client = Client::builder()
+            .timeout(Duration::from_secs(timeout_seconds.unwrap_or(30)))
+            .pool_max_idle_per_host(5)
+            .gzip(true)
+            .brotli(true)
+            .build()
+            .map_err(|e| VersionError::NetworkError(e.to_string()))?;
+
+        let response = client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| VersionError::NetworkError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            return Err(VersionError::NetworkError(format!(
+                "HTTP错误: {}",
+                response.status()
+            )));
+        }
+
+        let content = response
+            .text()
+            .await
+            .map_err(|e| VersionError::ParseError(e.to_string()))?;
+
+        Ok(content)
     }
 }
