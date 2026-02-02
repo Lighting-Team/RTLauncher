@@ -20,6 +20,21 @@ pub mod get_version {
             const sjtug: &str = "https://mirror.sjtu.edu.cn/bmclapi"; // 思源镜像站
             const ustc: &str = "https://mirrors.ustc.edu.cn/bmclapi"; // 中国科学技术大学镜像站
 
+            pub fn get_version(mirror: &str) -> &'static str {
+                match mirror {
+                    "mojang" => mojang_heads::launcher_meta + version_suffix,
+                    "mojang_v2" => mojang_heads::launcher_meta + version2_suffix,
+                    "bmclapi" => bmclapi + version_suffix,
+                    "jcut" => jcut + version_suffix,
+                    "lzuoss" => lzuoss + version_suffix,
+                    "nju" => nju + version_suffix,
+                    "nyist" => nyist + version_suffix,
+                    "qlut" => qlut + version_suffix,
+                    "sjtug" => sjtug + version_suffix,
+                    "ustc" => ustc + version_suffix,
+                    _ => mojang_heads::launcher_meta + version_suffix,
+            }
+
             pub fn get_assests(mirror: &str) -> &'static str {
                 match mirror {
                     "bmclapi" => bmclapi + "/assets",
