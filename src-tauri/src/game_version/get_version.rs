@@ -33,6 +33,7 @@ pub mod get_version {
                     "sjtug" => sjtug + version_suffix,
                     "ustc" => ustc + version_suffix,
                     _ => mojang_heads::launcher_meta + version_suffix,
+                }
             }
 
             pub fn get_assests(mirror: &str) -> &'static str {
