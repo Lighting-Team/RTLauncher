@@ -19,44 +19,6 @@ pub mod get_version {
             const qlut: &str = "https://mirrors.qlu.edu.cn/bmclapi"; // 齐鲁工业大学镜像站
             const sjtug: &str = "https://mirror.sjtu.edu.cn/bmclapi"; // 思源镜像站
             const ustc: &str = "https://mirrors.ustc.edu.cn/bmclapi"; // 中国科学技术大学镜像站
-
-            pub fn get_version(mirror: &str) -> &'static str {
-                match mirror {
-                    "mojang" => mojang_heads::launcher_meta + version_suffix,
-                    "mojang_v2" => mojang_heads::launcher_meta + version2_suffix,
-                    "bmclapi" => bmclapi + version_suffix,
-                    "bmclapi_v2" => bmclapi + version2_suffix,
-                    "jcut" => jcut + version_suffix,
-                    "jcut_v2" => jcut + version2_suffix,
-                    "lzuoss" => lzuoss + version_suffix,
-                    "lzuoss_v2" => lzuoss + version2_suffix,
-                    "nju" => nju + version_suffix,
-                    "nju_v2" => nju + version2_suffix,
-                    "nyist" => nyist + version_suffix,
-                    "nyist_v2" => nyist + version2_suffix,
-                    "qlut" => qlut + version_suffix,
-                    "qlut_v2" => qlut + version2_suffix,
-                    "sjtug" => sjtug + version_suffix,
-                    "sjtug_v2" => sjtug + version2_suffix,
-                    "ustc" => ustc + version_suffix,
-                    "ustc_v2" => ustc + version2_suffix,
-                    _ => mojang_heads::launcher_meta + version_suffix,
-                }
-            }
-
-            pub fn get_assests(mirror: &str) -> &'static str {
-                match mirror {
-                    "bmclapi" => bmclapi + "/assets",
-                    "jcut" => jcut + "/assets",
-                    "lzuoss" => lzuoss + "/assets",
-                    "nju" => nju + "/assets",
-                    "nyist" => nyist + "/assets",
-                    "qlut" => qlut + "/assets",
-                    "sjtug" => sjtug + "/assets",
-                    "ustc" => ustc + "/assets",
-                    _ => mojang_heads::assests,
-                }
-            }
         }
 
         pub mod authlib_injector {
@@ -136,6 +98,44 @@ pub mod get_version {
         let content = response.text().await?;
 
         Ok(content)
+    }
+
+    pub fn get_version(mirror: &str) -> &'static str {
+        match mirror {
+            "mojang" => mojang_heads::launcher_meta + version_suffix,
+            "mojang_v2" => mojang_heads::launcher_meta + version2_suffix,
+            "bmclapi" => bmclapi + version_suffix,
+            "bmclapi_v2" => bmclapi + version2_suffix,
+            "jcut" => jcut + version_suffix,
+            "jcut_v2" => jcut + version2_suffix,
+            "lzuoss" => lzuoss + version_suffix,
+            "lzuoss_v2" => lzuoss + version2_suffix,
+            "nju" => nju + version_suffix,
+            "nju_v2" => nju + version2_suffix,
+            "nyist" => nyist + version_suffix,
+            "nyist_v2" => nyist + version2_suffix,
+            "qlut" => qlut + version_suffix,
+            "qlut_v2" => qlut + version2_suffix,
+            "sjtug" => sjtug + version_suffix,
+            "sjtug_v2" => sjtug + version2_suffix,
+            "ustc" => ustc + version_suffix,
+            "ustc_v2" => ustc + version2_suffix,
+            _ => mojang_heads::launcher_meta + version_suffix,
+        }
+    }
+
+    pub fn get_assests(mirror: &str) -> &'static str {
+        match mirror {
+            "bmclapi" => bmclapi + "/assets",
+            "jcut" => jcut + "/assets",
+            "lzuoss" => lzuoss + "/assets",
+            "nju" => nju + "/assets",
+            "nyist" => nyist + "/assets",
+            "qlut" => qlut + "/assets",
+            "sjtug" => sjtug + "/assets",
+            "ustc" => ustc + "/assets",
+            _ => mojang_heads::assests,
+        }
     }
 
     /// 镜像源枚举
