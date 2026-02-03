@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "为生电而生的多平台 Minecraft 启动器"
 authors = ["Grey-Wind", "Moralts"]
 license = ""
-repository = ""
+repository = "https://github.com/Lighting-Team/RTLauncher"
 edition = "2021"
 rust-version = "1.77.2"
 
