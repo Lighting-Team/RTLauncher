@@ -17,36 +17,37 @@ import {
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { TeamSwitcher } from "@/components/example-switcher"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "MocoStars",
+    email: "instars2233@outlook.com",
     avatar: "/avatars/shadcn.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "Fabric 1.20.1",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
+      plan: "Fabric Loader",
     },
     {
-      name: "Acme Corp.",
+      name: "NeoForge 26.1",
       logo: AudioWaveform,
-      plan: "Startup",
+      plan: "NeoForge Loader",
     },
     {
-      name: "Evil Corp.",
+      name: "1.21.11",
       logo: Command,
-      plan: "Free",
+      plan: "Vanilla",
     },
   ],
   navMain: [
@@ -161,6 +162,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
+      <Button size="sm" className="mx-4">启动实例</Button>
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />

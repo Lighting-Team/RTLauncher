@@ -5,8 +5,11 @@ import {
   Bell,
   ChevronsUpDown,
   CreditCard,
+  Hexagon,
   LogOut,
-  Sparkles,
+  RectangleGoggles,
+  RotateCw,
+  UserPen,
 } from "lucide-react"
 
 import {
@@ -82,29 +85,29 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
+                <RotateCw />
+                重新登录
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <BadgeCheck />
-                Account
+                <Hexagon />
+                账户信息
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCard />
-                Billing
+                <UserPen />
+                更换皮肤
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Bell />
-                Notifications
+                <RectangleGoggles />
+                更换披风
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <LogOut />
-              Log out
+              退出登录
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { ChevronsUpDown, PanelsTopLeft, Plus } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -61,7 +61,7 @@ export function TeamSwitcher({
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Teams
+              实例选择
             </DropdownMenuLabel>
             {teams.map((team, index) => (
               <DropdownMenuItem
@@ -79,9 +79,9 @@ export function TeamSwitcher({
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 p-2">
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
-                <Plus className="size-4" />
+                <PanelsTopLeft className="size-4" />
               </div>
-              <div className="text-muted-foreground font-medium">Add team</div>
+              <div className="text-muted-foreground font-medium">管理游戏实例</div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
