@@ -17,7 +17,7 @@ import {
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/example-switcher"
+import { ExampleSwitcher } from "@/components/example-switcher"
 import {
   Sidebar,
   SidebarContent,
@@ -33,7 +33,7 @@ const data = {
     email: "instars2233@outlook.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  teams: [
+  examples: [
     {
       name: "Fabric 1.20.1",
       logo: GalleryVerticalEnd,
@@ -160,9 +160,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <ExampleSwitcher examples={data.examples} />
       </SidebarHeader>
-      <Button size="sm" className="mx-4">启动实例</Button>
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
