@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { TitleBar } from "@/components/title-bar";
+import { ThemeProvider } from "@/components/theme-provider";
 
-const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
+const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,17 +27,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={figtree.variable}>
+    <html lang="zh-CN" className={figtree.variable} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen flex flex-col overflow-hidden bg-background`}
       >
-        {/* Custom Title Bar */}
-        <TitleBar />
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TitleBar />
+
+          <main className="flex-1 overflow-auto">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );
