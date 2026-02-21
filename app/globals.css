@@ -124,3 +124,41 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Tauri Custom Titlebar Drag Region */
+*[data-tauri-drag-region] {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
+/* Elements that should not be draggable (buttons, inputs, etc) */
+.no-drag,
+.no-drag * {
+  app-region: no-drag !important;
+  -webkit-app-region: no-drag !important;
+}
+
+/* Prevent text selection in title bar */
+*[data-tauri-drag-region] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Custom scrollbar for the app */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
