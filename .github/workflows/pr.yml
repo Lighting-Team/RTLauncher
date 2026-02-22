@@ -1,4 +1,4 @@
-name: 'Tauri App Build Test'
+name: 'Tauri App Build PR Test'
 
 on:
   pull_request:
