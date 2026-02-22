@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { TitleBar } from "@/components/title-bar";
+import { Sidebar } from "@/components/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -37,9 +39,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TitleBar />
+          <TooltipProvider>
+            <TitleBar />
 
-          <main className="flex-1 overflow-auto">{children}</main>
+            <div className="flex flex-1 overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 overflow-auto">{children}</main>
+            </div>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
