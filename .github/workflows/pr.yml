@@ -6,7 +6,7 @@ on:
 
 jobs:
   test-tauri:
-    if: github.event.label.name == '自动构建'
+    if: github.event.label.name == 'Action 构建'
     
     permissions:
       contents: read
@@ -94,7 +94,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: '自动构建'
+              name: 'Action 构建'
             });
 
     outputs:
@@ -120,5 +120,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: '自动构建'
+              name: 'Action 构建'
             });
