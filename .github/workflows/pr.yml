@@ -1,12 +1,12 @@
-name: 'Tauri App Build PR'
+name: 'Tauri App Build Test'
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, labeled]
 
 jobs:
   test-tauri:
-    if: github.event.label.name == 'Action 构建'
+    if: github.event.action == 'opened' || github.event.label.name == '需要 Action 构建'
     
     permissions:
       contents: read
@@ -18,12 +18,16 @@ jobs:
         include:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
+            name: 'macOS ARM64'
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
+            name: 'macOS x64'
           - platform: 'ubuntu-22.04'
             args: ''
+            name: 'Linux'
           - platform: 'windows-latest'
             args: ''
+            name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -80,29 +84,13 @@ jobs:
             src-tauri/target/release/bundle/**/*.exe
           if-no-files-found: warn
 
-      - if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `❌ **构建失败** - ${{ matrix.platform }} ${{ matrix.args }}`
-            });
-            await github.rest.issues.removeLabel({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'Action 构建'
-            });
-
     outputs:
       result: ${{ job.status }}
+      platform: ${{ matrix.name }}
 
-  notify:
+  cleanup:
     needs: test-tauri
-    if: always() && needs.test-tauri.result == 'success'
+    if: always() && (github.event.action == 'opened' || github.event.label.name == '需要 Action 构建')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -110,15 +98,52 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
+            const results = JSON.parse('${{ toJson(needs.test-tauri.result) }}');
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const commit = context.sha.substring(0, 7);
+            const branch = context.ref.replace('refs/heads/', '');
+            
+            let body = '';
+            
+            if (results == 'success') {
+              body = `✅ **构建成功**\n\n`;
+              body += `- 分支: ${branch}\n`;
+              body += `- 提交: ${commit}\n`;
+              body += `- 触发方式: ${context.payload.action == 'opened' ? 'PR 创建' : '标签触发'}\n\n`;
+              body += `**构建产物:**\n`;
+              body += `- macOS ARM64: \`tauri-app-macos-arm64\`\n`;
+              body += `- macOS x64: \`tauri-app-macos-x64\`\n`;
+              body += `- Linux: \`tauri-app-linux\`\n`;
+              body += `- Windows: \`tauri-app-windows\`\n\n`;
+              body += `[查看详情并下载](${runUrl})`;
+            } else {
+              body = `❌ **构建失败**\n\n`;
+              body += `- 分支: ${branch}\n`;
+              body += `- 提交: ${commit}\n`;
+              body += `- 触发方式: ${context.payload.action == 'opened' ? 'PR 创建' : '标签触发'}\n`;
+              body += `- 失败状态: ${results}\n\n`;
+              body += `请检查以下可能原因:\n`;
+              body += `- 代码编译错误\n`;
+              body += `- 依赖安装失败\n`;
+              body += `- 构建配置问题\n\n`;
+              body += `[查看详细日志](${runUrl})`;
+            }
+            
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ **构建完成**\n\n所有平台构建成功，请在 Actions 页面下载产物。`
+              body: body
             });
-            await github.rest.issues.removeLabel({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'Action 构建'
-            });
+            
+            if (github.event.label.name == '需要 Action 构建') {
+              try {
+                await github.rest.issues.removeLabel({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: '需要 Action 构建'
+                });
+              } catch (e) {
+              }
+            }
