@@ -4,9 +4,7 @@ use tauri::{WebviewUrl, WebviewWindowBuilder};
 use tauri::TitleBarStyle;
 
 #[cfg(target_os = "macos")]
-use cocoa::appkit::NSColor;
-#[cfg(target_os = "macos")]
-use cocoa::base::{id, nil};
+use objc2_app_kit::{NSColor, NSWindow};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,7 +25,6 @@ pub fn run() {
                 .center()
                 .resizable(true)
                 .fullscreen(false)
-                .transparent(true)
                 .shadow(true);
 
             // macOS: 使用透明标题栏
@@ -43,15 +40,20 @@ pub fn run() {
             // macOS: 设置窗口背景颜色
             #[cfg(target_os = "macos")]
             unsafe {
-                let ns_window = _window.ns_window().unwrap() as id;
-                let bg_color = NSColor::colorWithRed_green_blue_alpha_(
-                    nil,
+                // 获取原生窗口句柄并转换为 objc2 的 NSWindow
+                let ns_window_ptr = _window.ns_window().unwrap() as *mut objc2::runtime::AnyObject;
+                let ns_window = &*(ns_window_ptr as *const NSWindow);
+
+                // 创建背景颜色 (sRGB 色彩空间)
+                let bg_color = NSColor::colorWithSRGBRed_green_blue_alpha(
                     50.0 / 255.0,
                     158.0 / 255.0,
                     163.5 / 255.0,
                     1.0,
                 );
-                ns_window.setBackgroundColor_(bg_color);
+
+                // 设置窗口背景色
+                ns_window.setBackgroundColor(Some(&bg_color));
             }
 
             Ok(())

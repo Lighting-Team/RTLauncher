@@ -10,7 +10,14 @@
     "beforeBuildCommand": "pnpm build"
   },
   "app": {
-    "windows": [],
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "transparent": true,
+        "shadow": true
+      }
+    ],
     "security": {
       "csp": null
     }
