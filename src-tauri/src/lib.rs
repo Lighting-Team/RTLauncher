@@ -1,4 +1,4 @@
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
@@ -18,24 +18,30 @@ pub fn run() {
                 )?;
             }
 
-            // 为所有平台创建主窗口
-            let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-                .title("RTLauncher")
-                .inner_size(1200.0, 800.0)
-                .center()
-                .resizable(true)
-                .fullscreen(false)
-                .shadow(true);
+            // 为所有平台创建主窗口（如果还不存在）
+            let window = if let Some(window) = app.get_webview_window("main") {
+                window
+            } else {
+                let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                    .title("RTLauncher")
+                    .inner_size(1200.0, 800.0)
+                    .center()
+                    .resizable(true)
+                    .fullscreen(false)
+                    .shadow(true);
 
-            // macOS: 使用透明标题栏
-            #[cfg(target_os = "macos")]
-            let win_builder = win_builder.title_bar_style(TitleBarStyle::Transparent);
+                // macOS: 使用透明标题栏
+                #[cfg(target_os = "macos")]
+                let win_builder = win_builder.title_bar_style(TitleBarStyle::Transparent);
 
-            // Windows/Linux: 使用无边框窗口（完全自定义标题栏）
-            #[cfg(not(target_os = "macos"))]
-            let win_builder = win_builder.decorations(false);
+                // Windows/Linux: 使用无边框窗口（完全自定义标题栏）
+                #[cfg(not(target_os = "macos"))]
+                let win_builder = win_builder.decorations(false);
 
-            let _window = win_builder.build().unwrap();
+                win_builder.build()?
+            };
+
+            let _window = window;
 
             // macOS: 设置窗口背景颜色
             #[cfg(target_os = "macos")]
