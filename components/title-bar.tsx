@@ -123,9 +123,9 @@ export function TitleBar({ className }: TitleBarProps) {
       )}
       data-tauri-drag-region
     >
-      {/* Left: App Icon and Title - Draggable */}
+      {/* 左侧：应用图标和标题 - 可拖拽（留出 80px 给 macOS 系统按钮） */}
       <div
-        className="flex items-center gap-2 px-3 h-full"
+        className="flex items-center gap-2 px-3 h-full ml-[80px] md:ml-0"
         data-tauri-drag-region
       >
         <AppLogo className="text-foreground w-5 h-5" data-tauri-drag-region />
@@ -137,38 +137,37 @@ export function TitleBar({ className }: TitleBarProps) {
         </span>
       </div>
 
-      {/* Center: Draggable area */}
+      {/* 中间：可拖拽区域 */}
       <div className="flex-1 h-full" data-tauri-drag-region />
 
-      {/* Right: Window Controls - NOT draggable */}
-      <div className="flex items-center h-full no-drag">
+      {/* 右侧：窗口控制按钮 - 不可拖拽 */}
+      <div className="flex items-center h-full no-drag gap-1 pr-3">
         <ModeToggle />
 
-        <WindowButton onClick={handleMinimize} title="最小化">
-          <Minus className="size-4" />
-        </WindowButton>
+        <div className="flex items-center gap-1">
+          <WindowButton onClick={handleMinimize} title="最小化">
+            <Minus className="size-4" />
+          </WindowButton>
 
-        <WindowButton
-          onClick={handleMaximizeRestore}
-          title={isMaximized ? "还原" : "最大化"}
-        >
-          {isMaximized ? (
-            <Copy className="size-3.5 rotate-90" />
-          ) : (
-            <Maximize2 className="size-3.5" />
-          )}
-        </WindowButton>
+          <WindowButton
+            onClick={handleMaximizeRestore}
+            title={isMaximized ? "还原" : "最大化"}
+          >
+            {isMaximized ? (
+              <Copy className="size-3.5 rotate-90" />
+            ) : (
+              <Maximize2 className="size-3.5" />
+            )}
+          </WindowButton>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-full w-11 rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors hover:bg-destructive hover:text-white active:bg-destructive/90 dark:hover:bg-red-600 dark:active:bg-red-700"
-          onClick={handleClose}
-          title="关闭"
-        >
-          <X className="size-4" />
-        </Button>
+          <WindowButton
+            onClick={handleClose}
+            title="关闭"
+            className="hover:bg-destructive hover:text-white active:bg-destructive/90 dark:hover:bg-red-600 dark:active:bg-red-700"
+          >
+            <X className="size-4" />
+          </WindowButton>
+        </div>
       </div>
     </div>
   )
@@ -178,15 +177,19 @@ interface WindowButtonProps {
   onClick: () => void
   title: string
   children: React.ReactNode
+  className?: string
 }
 
-function WindowButton({ onClick, title, children }: WindowButtonProps) {
+function WindowButton({ onClick, title, children, className }: WindowButtonProps) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon"
-      className="h-full w-11 rounded-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors hover:bg-muted/80 active:bg-muted"
+      className={cn(
+        "h-8 w-8 rounded-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors hover:bg-muted/80 active:bg-muted",
+        className
+      )}
       onClick={onClick}
       title={title}
     >
