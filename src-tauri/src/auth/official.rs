@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 use sqlite::Connection;
 use std::time::Duration;
 use tokio::time::sleep;
+use std::fs;
+use std::path::Path;
+use base64::decode;
+use tokio::time::Instant;
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DeviceCodeResponse {
@@ -52,20 +57,6 @@ struct MinecraftProfileResponse {
     id: String,
     name: String,
 }
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 初始化 SQLite 数据库
-    let connection = setup_database()?;
-    let client = Client::new();
-    let client_id = "1662e9cb-e526-4bea-8237-11526075b7f3";
-
-    // Step 1: Get device code
-    
-   check_account_time(&client, &connection, client_id,"Elanda_seaweeds").await?;
-    Ok(())
-}
-
 async fn get_device_code(client: &Client, client_id: &str) -> Result<DeviceCodeResponse, Box<dyn std::error::Error>> {
     let params = [
         ("client_id", client_id),
@@ -327,4 +318,133 @@ async fn check_account_time(
     }
 
     Ok(())
+}
+async fn download_player_skin(client: &Client, uuid: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // Create profile directory if it doesn't exist
+    let profile_dir = "profile";
+    if !Path::new(profile_dir).exists() {
+        fs::create_dir(profile_dir)?;
+    }
+
+    // Get player profile to check if skin exists
+    let profile_response = client
+        .get(&format!("https://sessionserver.mojang.com/session/minecraft/profile/{}", uuid))
+        .send()
+        .await?;
+
+    if !profile_response.status().is_success() {
+        return Err("Failed to fetch player profile".into());
+    }
+
+    let profile_json: serde_json::Value = profile_response.json().await?;
+    let properties = profile_json["properties"].as_array()
+        .ok_or("No properties found in profile")?;
+
+    // Find the textures property
+    let textures_property = properties.iter()
+        .find(|p| p["name"].as_str() == Some("textures"))
+        .ok_or("No textures property found")?;
+
+    // Decode the base64 textures value
+    let textures_base64 = textures_property["value"].as_str()
+        .ok_or("Textures value is not a string")?;
+    let decoded = base64::decode(textures_base64)?;
+    let textures_json: serde_json::Value = serde_json::from_slice(&decoded)?;
+
+    // Get the skin URL
+    let skin_url = textures_json["textures"]["SKIN"]["url"].as_str()
+        .ok_or("No skin URL found in textures")?;
+
+    // Download the skin image
+    let skin_response = client.get(skin_url).send().await?;
+    if !skin_response.status().is_success() {
+        return Err("Failed to download skin".into());
+    }
+
+    // Save the skin to file
+    let skin_bytes = skin_response.bytes().await?;
+    let skin_path = format!("{}/{}.png", profile_dir, uuid);
+    fs::write(skin_path, skin_bytes)?;
+
+    Ok(())
+}
+async fn add_new_account(
+    client: &Client,
+    connection: &Connection,
+    client_id: &str,
+) -> Result<(String, String), Box<dyn std::error::Error>> {
+    println!("开始新账户登录流程...");
+
+    // 1. 获取设备代码
+    let device_code_response = get_device_code(client, client_id).await?;
+    println!(
+        "请访问 {} 并输入代码: {}",
+        device_code_response.verification_uri, device_code_response.user_code
+    );
+
+    // 记录开始时间
+    let start_time = Instant::now();
+    let timeout = Duration::from_secs(300); // 5 分钟超时
+
+    loop {
+        // 检查是否超时
+        if start_time.elapsed() >= timeout {
+            return Err("登录超时".into());
+        }
+
+        // 2. 轮询获取token
+        let token_response = poll_for_token(
+            client,
+            client_id,
+            &device_code_response.device_code,
+            device_code_response.interval,
+        )
+        .await;
+
+        match token_response {
+            Ok(token) => {
+                // 3. Xbox Live认证
+                let xbox_token_response = authenticate_with_xbox_live(client, &token.access_token).await?;
+
+                // 4. 获取XSTS token
+                let xsts_token_response = get_xsts_token(client, &xbox_token_response.Token).await?;
+
+                // 5. Minecraft认证
+                let minecraft_login_response = authenticate_with_minecraft(
+                    client,
+                    &xbox_token_response.DisplayClaims.xui[0].uhs,
+                    &xsts_token_response.Token,
+                )
+                .await?;
+
+                // 6. 检查是否拥有Minecraft
+                let purchase_status = check_mc_purchase(client, &minecraft_login_response.access_token).await?;
+                if purchase_status.contains("还没有购买") {
+                    return Err(purchase_status.into());
+                }
+
+                // 7. 获取Minecraft个人资料
+                let profile = get_minecraft_profile(client, &minecraft_login_response.access_token).await?;
+
+                // 8. 下载玩家皮肤
+                download_player_skin(client, &profile.id).await?;
+
+                // 9. 保存账户信息到数据库
+                save_account_info(
+                    connection,
+                    &profile.name,
+                    &profile.id,
+                    &token.refresh_token,
+                    &minecraft_login_response.access_token,
+                )?;
+
+                // 返回用户名和UUID
+                return Ok((profile.name, profile.id));
+            }
+            Err(_) => {
+                // 如果未成功获取token，继续等待
+                sleep(Duration::from_secs(device_code_response.interval)).await;
+            }
+        }
+    }
 }
