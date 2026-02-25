@@ -1,3 +1,19 @@
+pub mod client_list;
+pub mod download;
+pub mod error;
+pub mod models;
+pub mod source;
+pub mod task;
+pub mod tasks;
+pub mod utils;
+
+pub use download::{DownloadConfig, DownloadStrategy, DownloadTask, HighSpeedDownloader};
+pub use error::{DownloadError, Result};
+pub use models::*;
+pub use task::*;
+pub use tasks::*;
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
