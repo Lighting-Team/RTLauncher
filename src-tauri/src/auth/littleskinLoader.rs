@@ -294,7 +294,7 @@
             }
         }
     }
-
+    #[tauri::command]
     pub fn useMethod() -> Result<(), Box<dyn std::error::Error>>{    // 创建 LittleSkinClient 实例
         let mut client = LittleSkinClient::new();
 
@@ -305,3 +305,4 @@
         println!("{}", result);
         Ok(())
     }
+
