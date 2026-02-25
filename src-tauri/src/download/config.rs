@@ -1,5 +1,3 @@
-//! 下载配置模块
-
 /// 下载策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DownloadStrategy {

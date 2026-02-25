@@ -1,7 +1,3 @@
-//! 高速下载器
-//!
-//! 实现多线程、分块下载，支持多种下载策略
-
 use super::{DownloadConfig, DownloadStrategy, DownloadTask};
 use crate::error::{DownloadError, Result};
 use std::fs::{self, File};

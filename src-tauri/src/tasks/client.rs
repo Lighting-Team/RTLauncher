@@ -1,7 +1,3 @@
-//! 客户端下载任务
-//!
-//! 处理 Minecraft 客户端的下载，包括版本 JSON、客户端 Jar、资源文件和依赖库
-
 use crate::{
     client_list::DlClientListLoader,
     download::{DownloadConfig, DownloadTask, HighSpeedDownloader},

@@ -1,5 +1,3 @@
-//! Minecraft 客户端版本列表模块
-
 use crate::error::{DownloadError, Result};
 use crate::models::DlClientListResult;
 use crate::utils::get_time_ms;

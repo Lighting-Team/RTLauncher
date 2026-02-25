@@ -1,5 +1,3 @@
-//! 下载任务定义
-
 use super::config::DownloadStrategy;
 
 /// 下载任务 - 区分官方源和镜像源

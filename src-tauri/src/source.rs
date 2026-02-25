@@ -1,9 +1,3 @@
-//! 下载源模块
-//!
-//! 提供下载源管理和选择功能
-
-/// 获取启动器或元数据下载源
-/// 根据原始URL生成官方源和镜像源的URL列表
 pub fn dl_source_launcher_or_meta_get(original_url: &str) -> Vec<String> {
     let mut urls = Vec::new();
     
